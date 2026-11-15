@@ -273,6 +273,43 @@ begin
 end;
 $$;
 
+-- Elimina los votos de una pregunta y la devuelve a borrador para repetir la votación.
+create or replace function public.reset_voting_question(p_question_id uuid)
+returns integer
+language plpgsql security definer
+set search_path = public
+as $$
+declare
+  v_question public.voting_questions%rowtype;
+  v_count integer;
+begin
+  if not public.is_voting_admin() then
+    raise exception 'Acceso no autorizado';
+  end if;
+
+  select * into v_question from public.voting_questions
+  where id = p_question_id
+  for update;
+  if not found then raise exception 'La pregunta no existe'; end if;
+
+  select count(*)::integer into v_count
+  from public.voting_ballots
+  where question_id = p_question_id;
+
+  delete from public.voting_ballots where question_id = p_question_id;
+  update public.voting_questions set status = 'draft' where id = p_question_id;
+
+  update public.voting_meetings m set status = 'setup'
+  where m.id = v_question.meeting_id
+    and not exists (
+      select 1 from public.voting_questions q
+      where q.meeting_id = m.id and q.status = 'active'
+    );
+
+  return v_count;
+end;
+$$;
+
 grant usage on schema public to anon, authenticated;
 grant select on public.admin_users to authenticated;
 grant select, insert, update, delete on public.voting_meetings, public.voting_codes, public.voting_units, public.voting_questions to authenticated;
@@ -280,6 +317,7 @@ grant select on public.voting_ballots to authenticated;
 grant execute on function public.get_active_question(text) to anon, authenticated;
 grant execute on function public.submit_vote(text, integer) to anon, authenticated;
 grant execute on function public.get_voting_results(uuid) to authenticated;
+grant execute on function public.reset_voting_question(uuid) to authenticated;
 
 -- Después de crear el usuario administrador en Authentication > Users,
 -- copia su UUID y ejecuta:

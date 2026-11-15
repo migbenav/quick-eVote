@@ -5,6 +5,7 @@ const $ = id => document.getElementById(id);
 let meetingId = null;
 let existingUnits = new Map();
 let codesByCode = new Map();
+let meetingTitles = new Map();
 let csvParsed = null;
 let editingQuestionId = null;
 
@@ -34,6 +35,7 @@ $("logoutBtn").onclick=async()=>{await db.auth.signOut();meetingId=null;refreshS
 async function loadMeetings(){
   const {data,error}=await db.from("voting_meetings").select("*").order("created_at",{ascending:false});
   if(error){msg("globalMsg",error.message,true);return;}
+  meetingTitles=new Map(data.map(m=>[m.id,m.title]));
   $("meetingSelect").innerHTML='<option value="">Seleccionar...</option>'+data.map(m=>`<option value="${m.id}">${esc(m.title)} (${m.status})</option>`).join("");
 }
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -508,7 +510,8 @@ async function loadQuestions(){
       return `<div class="status question-card"><label>Pregunta</label><textarea id="editQuestionText">${esc(q.question_text)}</textarea><label>Opciones (una por línea)</label><textarea id="editQuestionOptions">${esc(q.options.join("\n"))}</textarea><div class="actions"><button data-action="save" data-id="${q.id}">Guardar cambios</button><button class="secondary" data-action="cancel" data-id="${q.id}">Cancelar</button></div><div id="editQuestionMsg" class="status hidden"></div></div>`;
     }
     const canEdit=q.status==="draft"||q.status==="closed";
-    return `<div class="status question-card"><b>${q.position}. ${esc(q.question_text)}</b><br><span class="small">${statusLabel(q.status)}</span><br>${q.options.map(esc).join(" · ")}<div class="actions">${q.status==="draft"?`<button data-action="activate" data-id="${q.id}">Activar</button>`:""}${q.status==="active"?`<button class="danger" data-action="close" data-id="${q.id}">Cerrar votación</button>`:""}${canEdit?`<button class="secondary" data-action="edit" data-id="${q.id}">Editar</button>`:""}${q.status!=="draft"?`<button class="secondary" data-action="results" data-id="${q.id}">Ver resultados</button>`:""}<button class="danger" data-action="delete" data-id="${q.id}">Eliminar</button></div></div>`;
+    const resetBtn=q.status!=="draft"?`<button class="secondary" data-action="reset" data-id="${q.id}">Reiniciar votación</button>`:"";
+    return `<div class="status question-card"><b>${q.position}. ${esc(q.question_text)}</b><br><span class="small">${statusLabel(q.status)}</span><br>${q.options.map(esc).join(" · ")}<div class="actions">${q.status==="draft"?`<button data-action="activate" data-id="${q.id}">Activar</button>`:""}${q.status==="active"?`<button class="danger" data-action="close" data-id="${q.id}">Cerrar votación</button>`:""}${canEdit?`<button class="secondary" data-action="edit" data-id="${q.id}">Editar</button>`:""}${q.status!=="draft"?`<button class="secondary" data-action="results" data-id="${q.id}">Ver resultados</button>`:""}${resetBtn}<button class="danger" data-action="delete" data-id="${q.id}">Eliminar</button></div></div>`;
   }).join(""):'<p class="small">Todavía no hay preguntas.</p>';
   $("questionsList").innerHTML="<h3>Preguntas</h3>"+html;
   $("questionsList").querySelectorAll("button").forEach(b=>b.onclick=()=>questionAction(b.dataset.action,b.dataset.id));
@@ -545,6 +548,25 @@ async function deleteQuestion(id){
     msg("globalMsg",error.message,true);
   }
 }
+async function resetQuestion(id){
+  try{
+    const count=await ballotCount(id);
+    const detalle=count===0?"Esta pregunta no tiene votos registrados.":`Se eliminarán ${count} voto(s) registrado(s).`;
+    const aviso=`${detalle} La pregunta volverá a quedar como borrador para poder editarla y activarla de nuevo. Esta acción no se puede deshacer.\n\n¿Reiniciar la votación?`;
+    if(!confirm(aviso))return;
+    const {data:deleted,error}=await db.rpc("reset_voting_question",{p_question_id:id});
+    if(error)throw error;
+    editingQuestionId=null;
+    $("results").innerHTML="";
+    await loadQuestions();
+    msg("globalMsg",`Votación reiniciada: se eliminaron ${deleted||0} voto(s). La pregunta quedó como borrador.`);
+  }catch(error){
+    const text=String(error.message).includes("reset_voting_question")
+      ?"Falta actualizar la base de datos. Vuelve a ejecutar database.sql en Supabase."
+      :error.message;
+    msg("globalMsg",text,true);
+  }
+}
 async function questionAction(action,id){
   if(action==="edit"){
     try{
@@ -557,6 +579,7 @@ async function questionAction(action,id){
   if(action==="cancel"){editingQuestionId=null;return loadQuestions();}
   if(action==="save")return saveQuestion(id);
   if(action==="delete")return deleteQuestion(id);
+  if(action==="reset")return resetQuestion(id);
   if(action==="activate"){
     const {error:closeErr}=await db.from("voting_questions").update({status:"closed"}).eq("meeting_id",meetingId).eq("status","active");
     if(closeErr)return msg("globalMsg",closeErr.message,true);
@@ -572,9 +595,24 @@ async function questionAction(action,id){
   if(action==="results"||action==="close")await showResults(id);
 }
 async function showResults(id){
-  const {data,error}=await db.rpc("get_voting_results",{p_question_id:id});
-  if(error)return msg("globalMsg",error.message,true);
+  const [result,questionResult]=await Promise.all([
+    db.rpc("get_voting_results",{p_question_id:id}),
+    db.from("voting_questions").select("question_text,status").eq("id",id).maybeSingle()
+  ]);
+  if(result.error)return msg("globalMsg",result.error.message,true);
+  if(questionResult.error)return msg("globalMsg",questionResult.error.message,true);
+  const data=result.data||[];
+  const question=questionResult.data;
   const total=data.reduce((s,r)=>s+Number(r.weighted_percentage),0);
-  $("results").innerHTML="<table><tr><th>Opción</th><th>Votos recibidos</th><th>Participación ponderada</th></tr>"+data.map(r=>`<tr><td>${esc(r.option_label)}</td><td>${r.ballots}</td><td>${Number(r.weighted_percentage).toFixed(6)}%</td></tr>`).join("")+`</table><p><b>Total de participación contabilizada: ${total.toFixed(6)}%</b></p>`;
+  const title=meetingTitles.get(meetingId)||"";
+  $("results").innerHTML=`<div class="result-block">`
+    +`<p class="small">${esc(title)}</p>`
+    +`<h3>${esc(question?.question_text||"Pregunta")}</h3>`
+    +`<table><tr><th>Opción</th><th>Votos recibidos</th><th>Participación ponderada (%)</th></tr>`
+    +data.map(r=>`<tr><td>${esc(r.option_label)}</td><td>${r.ballots}</td><td>${Number(r.weighted_percentage).toFixed(2)}</td></tr>`).join("")
+    +`</table>`
+    +`<p><b>Total de participación contabilizada: ${total.toFixed(2)}%</b></p>`
+    +(question?`<p class="small">Estado: ${statusLabel(question.status)}</p>`:"")
+    +`</div>`;
 }
 refreshSession();

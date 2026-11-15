@@ -37,7 +37,9 @@ Las rutas son:
 8. Mientras esté en **Borrador**, puedes usar **Editar** para corregir el texto o las opciones, o **Eliminar** para quitarla. También puedes editar una pregunta **Cerrada** que todavía no tenga votos.
 9. Activa la pregunta y comparte `/vote/` con los participantes. Solo una pregunta puede estar activa a la vez, pero puedes activar cualquier borrador en el orden que quieras: no hace falta reordenar la lista.
 
-Una vez que una pregunta tiene votos registrados ya no se puede editar ni eliminar, para no alterar resultados. Si necesitas cambiar el planteamiento, crea una pregunta nueva.
+Una vez que una pregunta tiene votos registrados ya no se puede editar ni eliminar, para no alterar resultados.
+
+Si necesitas **repetir la votación**, usa **Reiniciar votación** en esa pregunta. Pide confirmación, elimina todos sus votos y la devuelve a **Borrador**, conservando el texto y las opciones. Desde ahí puedes editarla, activarla y volver a votar. No hace falta crear una pregunta nueva ni borrar la anterior. Ten en cuenta que el reinicio es definitivo: si quieres conservar los resultados anteriores, no lo uses (captúralos antes o crea una pregunta nueva).
 
 La agrupación puede cambiar en cualquier momento reimportando el CSV: las unidades se actualizan por su código de unidad y el código de voto se reasigna. Haz estos cambios antes de abrir la votación, porque los resultados se recalculan con las unidades actuales.
 
@@ -81,6 +83,8 @@ El peso de un código de voto es la **suma de los porcentajes de sus unidades ac
 Ejemplo: si `C001` agrupa A704 (0.59%) y E05 (0.20%), su peso es 0.79%. Si registra un solo voto, ese voto aporta 0.79 puntos porcentuales. Si permite hasta dos votos y recibe dos, cada uno aporta 0.395. Los votos de un mismo código pueden seleccionar opciones diferentes si se habilitaron varios votos.
 
 Las unidades inactivas o sin código de voto no suman. Los resultados solo pueden consultarse con una cuenta autorizada como administrador.
+
+La sección **4. Resultados** muestra el nombre de la reunión, el texto completo de la pregunta, los votos recibidos y la participación ponderada de cada opción, además del total contabilizado. Está pensada para poder capturarla y publicarla tal cual.
 
 ## 5. Límites de esta versión inicial
 
