@@ -1,0 +1,33 @@
+:root { font-family: Inter, system-ui, Arial, sans-serif; color: #1d2939; background: #f4f6f8; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+header { background: #172b4d; color: white; padding: 18px 24px; }
+header h1 { margin: 0; font-size: 20px; }
+main { max-width: 980px; margin: 28px auto; padding: 0 16px 48px; }
+.card { background: white; border: 1px solid #e3e8ef; border-radius: 12px; padding: 20px; margin: 16px 0; box-shadow: 0 2px 8px #172b4d0a; }
+h2 { margin: 0 0 14px; font-size: 18px; }
+h3 { margin: 18px 0 8px; font-size: 15px; }
+label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 5px; }
+input, textarea, select { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 11px; font: inherit; background: white; }
+textarea { min-height: 76px; resize: vertical; }
+button { border: 0; border-radius: 8px; padding: 11px 16px; background: #2457a7; color: white; font-weight: 650; cursor: pointer; margin: 8px 6px 0 0; }
+button.secondary { background: #e8edf5; color: #243b5a; }
+button.danger { background: #a93232; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.small { color: #667085; font-size: 13px; }
+.status { padding: 10px 12px; border-radius: 8px; background: #eef4ff; margin: 12px 0; white-space: pre-wrap; }
+.error { background: #fff0f0; color: #9b2525; }
+.success { background: #edf8f0; color: #216e39; }
+.row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.row.three { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.check { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+.check input { width: auto; }
+.import-box { border: 1px dashed #cbd5e1; border-radius: 10px; padding: 14px; margin: 14px 0; background: #fbfcfe; }
+.import-box h3 { margin-top: 0; }
+code { background: #eef2f7; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th, td { text-align: left; border-bottom: 1px solid #e7ebf0; padding: 9px 6px; font-size: 14px; }
+.vote-option { display: block; width: 100%; text-align: left; background: white; color: #172b4d; border: 1px solid #cbd5e1; padding: 16px; margin: 10px 0; }
+.vote-option:hover { border-color: #2457a7; background: #f4f7fc; }
+.hidden { display: none !important; }
+@media(max-width:650px) { .row, .row.three { grid-template-columns: 1fr; } main { margin-top: 14px; } .card { padding: 16px; } }

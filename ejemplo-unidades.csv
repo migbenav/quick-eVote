@@ -1,0 +1,8 @@
+unidad;descripcion;porcentaje;codigo_voto;contacto;max_votos;activo
+A101;Dpto. 101;0,250000;A101;Propietario A101;1;SI
+A102;Dpto. 102;0,500000;A102;Propietario A102;1;SI
+B101;Dpto. B101;0,400000;C001;Maria Lopez;1;SI
+B102;Dpto. B102;0,300000;C001;Maria Lopez;1;SI
+E01;Estacionamiento E01;0,150000;C001;Maria Lopez;1;SI
+C201;Dpto. 201;0,900000;A201;Propietario A201;1;NO
+C202;Dpto. 202;0,350000;;;1;NO

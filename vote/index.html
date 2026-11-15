@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Votación de propietarios</title><link rel="stylesheet" href="../styles.css"></head>
+<body><header><h1>Votación de propietarios</h1></header><main>
+<section class="card" id="entry"><h2>Ingresar a la votación</h2><p class="small">Escribe el código que recibiste para participar.</p><label>Código de votación</label><input id="code" autocomplete="off" autocapitalize="characters" placeholder="Ej. A704"><button id="continueBtn">Continuar</button><div id="entryMsg" class="status hidden"></div></section>
+<section class="card hidden" id="ballot"><p class="small">Pregunta activa</p><h2 id="question"></h2><div id="options"></div><div id="voteMsg" class="status hidden"></div></section>
+</main><script type="module" src="./vote.js"></script></body></html>
