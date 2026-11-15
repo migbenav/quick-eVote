@@ -34,7 +34,10 @@ Las rutas son:
 5. Las unidades que no deben votar se dejan con el código de voto vacío o con `activo = NO`. Siguen existiendo en el padrón, pero no suman.
 6. `Máximo de votos` normalmente es 1. Si varios copropietarios comparten el código y deben emitir votos separados, indica el número permitido.
 7. Crea una pregunta con sus opciones, una por línea.
-8. Activa la pregunta y comparte `/vote/` con los participantes.
+8. Mientras esté en **Borrador**, puedes usar **Editar** para corregir el texto o las opciones, o **Eliminar** para quitarla. También puedes editar una pregunta **Cerrada** que todavía no tenga votos.
+9. Activa la pregunta y comparte `/vote/` con los participantes. Solo una pregunta puede estar activa a la vez, pero puedes activar cualquier borrador en el orden que quieras: no hace falta reordenar la lista.
+
+Una vez que una pregunta tiene votos registrados ya no se puede editar ni eliminar, para no alterar resultados. Si necesitas cambiar el planteamiento, crea una pregunta nueva.
 
 La agrupación puede cambiar en cualquier momento reimportando el CSV: las unidades se actualizan por su código de unidad y el código de voto se reasigna. Haz estos cambios antes de abrir la votación, porque los resultados se recalculan con las unidades actuales.
 

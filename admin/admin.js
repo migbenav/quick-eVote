@@ -6,6 +6,7 @@ let meetingId = null;
 let existingUnits = new Map();
 let codesByCode = new Map();
 let csvParsed = null;
+let editingQuestionId = null;
 
 function msg(id, text, error=false) {
   const el=$(id); el.textContent=text; el.className="status"+(error?" error":"");
@@ -389,7 +390,7 @@ $("createMeetingBtn").onclick=async()=>{
 $("meetingSelect").onchange=()=>selectMeeting($("meetingSelect").value);
 async function selectMeeting(id){
   meetingId=id||null; $("codesList").innerHTML=""; $("unitsList").innerHTML=""; $("questionsList").innerHTML=""; $("results").innerHTML="";
-  existingUnits=new Map(); codesByCode=new Map(); csvParsed=null;
+  existingUnits=new Map(); codesByCode=new Map(); csvParsed=null; editingQuestionId=null;
   $("csvText").value=""; $("csvFile").value=""; $("replaceUnits").checked=false; $("csvPreview").innerHTML=""; $("csvMsg").classList.add("hidden"); $("importBtn").classList.add("hidden");
   if(!meetingId)return;
   await loadUnits(); await loadQuestions();
@@ -479,15 +480,83 @@ $("addQuestionBtn").onclick=async()=>{
   const position=(existing?.[0]?.position||0)+1;
   const {error}=await db.from("voting_questions").insert({meeting_id:meetingId,question_text,options,status:"draft",position});
   if(error)return msg("globalMsg",error.message,true);
-  $("question").value="";$("options").value="";await loadQuestions();msg("globalMsg","Pregunta guardada como borrador.");
+  $("question").value="";$("options").value="";editingQuestionId=null;await loadQuestions();msg("globalMsg","Pregunta guardada como borrador.");
 };
+function statusLabel(status){
+  return status==="draft"?"Borrador":status==="active"?"En votación":"Cerrada";
+}
+async function ballotCount(questionId){
+  const {count,error}=await db.from("voting_ballots").select("id",{count:"exact",head:true}).eq("question_id",questionId);
+  if(error)throw error;
+  return count||0;
+}
+async function renumberQuestions(){
+  const {data,error}=await db.from("voting_questions").select("id,position").eq("meeting_id",meetingId).order("position").order("created_at");
+  if(error)throw error;
+  for(let i=0;i<data.length;i++){
+    if(data[i].position!==i+1){
+      const {error:updateError}=await db.from("voting_questions").update({position:i+1}).eq("id",data[i].id);
+      if(updateError)throw updateError;
+    }
+  }
+}
 async function loadQuestions(){
-  const {data,error}=await db.from("voting_questions").select("*").eq("meeting_id",meetingId).order("position");
+  const {data,error}=await db.from("voting_questions").select("*").eq("meeting_id",meetingId).order("position").order("created_at");
   if(error)return msg("globalMsg",error.message,true);
-  $("questionsList").innerHTML="<h3>Preguntas</h3>"+data.map(q=>`<div class="status"><b>${q.position}. ${esc(q.question_text)}</b><br><span class="small">${q.status}</span><br>${q.options.map(esc).join(" · ")}<br>${q.status==="draft"?`<button data-action="activate" data-id="${q.id}">Activar</button>`:""}${q.status==="active"?`<button class="danger" data-action="close" data-id="${q.id}">Cerrar votación</button><button class="secondary" data-action="results" data-id="${q.id}">Ver resultados</button>`:""}${q.status==="closed"?`<button class="secondary" data-action="results" data-id="${q.id}">Ver resultados</button>`:""}</div>`).join("");
+  const html=data.length?data.map(q=>{
+    if(q.id===editingQuestionId){
+      return `<div class="status question-card"><label>Pregunta</label><textarea id="editQuestionText">${esc(q.question_text)}</textarea><label>Opciones (una por línea)</label><textarea id="editQuestionOptions">${esc(q.options.join("\n"))}</textarea><div class="actions"><button data-action="save" data-id="${q.id}">Guardar cambios</button><button class="secondary" data-action="cancel" data-id="${q.id}">Cancelar</button></div><div id="editQuestionMsg" class="status hidden"></div></div>`;
+    }
+    const canEdit=q.status==="draft"||q.status==="closed";
+    return `<div class="status question-card"><b>${q.position}. ${esc(q.question_text)}</b><br><span class="small">${statusLabel(q.status)}</span><br>${q.options.map(esc).join(" · ")}<div class="actions">${q.status==="draft"?`<button data-action="activate" data-id="${q.id}">Activar</button>`:""}${q.status==="active"?`<button class="danger" data-action="close" data-id="${q.id}">Cerrar votación</button>`:""}${canEdit?`<button class="secondary" data-action="edit" data-id="${q.id}">Editar</button>`:""}${q.status!=="draft"?`<button class="secondary" data-action="results" data-id="${q.id}">Ver resultados</button>`:""}<button class="danger" data-action="delete" data-id="${q.id}">Eliminar</button></div></div>`;
+  }).join(""):'<p class="small">Todavía no hay preguntas.</p>';
+  $("questionsList").innerHTML="<h3>Preguntas</h3>"+html;
   $("questionsList").querySelectorAll("button").forEach(b=>b.onclick=()=>questionAction(b.dataset.action,b.dataset.id));
 }
+async function saveQuestion(id){
+  const question_text=$("editQuestionText").value.trim();
+  const options=$("editQuestionOptions").value.split("\n").map(s=>s.trim()).filter(Boolean);
+  if(!question_text||options.length<2)return msg("editQuestionMsg","Escribe la pregunta y al menos dos opciones, una por línea.",true);
+  if(options.length>10)return msg("editQuestionMsg","El máximo es 10 opciones.",true);
+  try{
+    if(await ballotCount(id)>0)return msg("editQuestionMsg","Esta pregunta ya tiene votos registrados y no se puede editar. Crea una pregunta nueva.",true);
+    const {error}=await db.from("voting_questions").update({question_text,options}).eq("id",id);
+    if(error)throw error;
+    editingQuestionId=null; await loadQuestions(); msg("globalMsg","Pregunta actualizada.");
+  }catch(error){
+    msg("editQuestionMsg",error.message,true);
+  }
+}
+async function deleteQuestion(id){
+  try{
+    const {data:question,error}=await db.from("voting_questions").select("id,status").eq("id",id).maybeSingle();
+    if(error)throw error;
+    if(!question)return msg("globalMsg","La pregunta ya no existe.",true);
+    if(await ballotCount(id)>0)return msg("globalMsg","No se puede eliminar: la pregunta ya tiene votos registrados.",true);
+    if(!confirm("¿Eliminar esta pregunta? Esta acción no se puede deshacer."))return;
+    const {error:deleteError}=await db.from("voting_questions").delete().eq("id",id);
+    if(deleteError)throw deleteError;
+    if(question.status==="active")await db.from("voting_meetings").update({status:"setup"}).eq("id",meetingId);
+    editingQuestionId=null;
+    await renumberQuestions();
+    await loadQuestions();
+    msg("globalMsg","Pregunta eliminada.");
+  }catch(error){
+    msg("globalMsg",error.message,true);
+  }
+}
 async function questionAction(action,id){
+  if(action==="edit"){
+    try{
+      if(await ballotCount(id)>0)return msg("globalMsg","Esta pregunta ya tiene votos registrados y no se puede editar. Crea una pregunta nueva.",true);
+    }catch(error){
+      return msg("globalMsg",error.message,true);
+    }
+    editingQuestionId=id;return loadQuestions();
+  }
+  if(action==="cancel"){editingQuestionId=null;return loadQuestions();}
+  if(action==="save")return saveQuestion(id);
+  if(action==="delete")return deleteQuestion(id);
   if(action==="activate"){
     const {error:closeErr}=await db.from("voting_questions").update({status:"closed"}).eq("meeting_id",meetingId).eq("status","active");
     if(closeErr)return msg("globalMsg",closeErr.message,true);
