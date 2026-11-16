@@ -23,6 +23,11 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .check { display: flex; align-items: center; gap: 8px; font-weight: 500; }
 .check input { width: auto; }
 .import-box { border: 1px dashed #cbd5e1; border-radius: 10px; padding: 14px; margin: 14px 0; background: #fbfcfe; }
+details.collapsible { border: 1px solid #e3e8ef; border-radius: 10px; padding: 0 14px; margin: 14px 0; background: #fbfcfe; }
+details.collapsible summary { cursor: pointer; font-weight: 650; padding: 12px 0; }
+details.collapsible[open] summary { border-bottom: 1px solid #e7ebf0; margin-bottom: 6px; }
+details.collapsible > div { padding-bottom: 12px; }
+.pill { display: inline-block; background: #e8edf5; color: #243b5a; border-radius: 999px; padding: 1px 8px; font-size: 12px; font-weight: 600; margin-left: 4px; }
 .question-card .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
 .result-block h3 { margin: 2px 0 8px; font-size: 17px; }
 .result-block > p:first-child { margin: 0; }

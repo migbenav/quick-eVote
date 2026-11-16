@@ -376,6 +376,7 @@ $("importBtn").onclick = async () => {
     $("csvPreview").innerHTML = "";
     $("importBtn").classList.add("hidden");
     await loadUnits();
+    $("unitsDetails").open=true;
   } catch (error) {
     msg("csvMsg", error.message, true);
   } finally {
@@ -391,7 +392,7 @@ $("createMeetingBtn").onclick=async()=>{
 };
 $("meetingSelect").onchange=()=>selectMeeting($("meetingSelect").value);
 async function selectMeeting(id){
-  meetingId=id||null; $("codesList").innerHTML=""; $("unitsList").innerHTML=""; $("questionsList").innerHTML=""; $("results").innerHTML="";
+  meetingId=id||null; $("codesList").innerHTML=""; $("unitsList").innerHTML=""; $("codesCount").textContent="0"; $("unitsCount").textContent="0"; $("questionsList").innerHTML=""; $("results").innerHTML="";
   existingUnits=new Map(); codesByCode=new Map(); csvParsed=null; editingQuestionId=null;
   $("csvText").value=""; $("csvFile").value=""; $("replaceUnits").checked=false; $("csvPreview").innerHTML=""; $("csvMsg").classList.add("hidden"); $("importBtn").classList.add("hidden");
   if(!meetingId)return;
@@ -420,7 +421,7 @@ $("addUnitBtn").onclick=async()=>{
     },{onConflict:"meeting_id,unit_code"});
     if(error)throw error;
     ["unitCode","unitLabel","weight","voteCode"].forEach(id=>$(id).value=""); $("maxVotes").value="1";
-    await loadUnits(); msg("globalMsg","Unidad agregada.");
+    await loadUnits(); $("unitsDetails").open=true; msg("globalMsg","Unidad agregada.");
   }catch(error){
     msg("globalMsg",error.message,true);
   }
@@ -460,7 +461,8 @@ async function loadUnits(){
         return `<tr><td>${esc(c.code)}</td><td>${esc(c.label)}</td><td>${stat.active} / ${stat.total}</td><td>${effective.toFixed(6)}</td><td>${c.max_votes}</td><td>${status}</td></tr>`;
       }).join("")+"</table>"
     :'<p class="small">Todavía no hay códigos de voto. Se crean automáticamente al importar unidades con código de voto.</p>';
-  $("codesList").innerHTML="<h3>Códigos de voto</h3>"+codesHtml;
+  $("codesCount").textContent=codes.length;
+  $("codesList").innerHTML=codesHtml;
 
   const unitsHtml=units.length
     ?"<table><tr><th>Unidad</th><th>Descripción</th><th>%</th><th>Código de voto</th><th>Estado</th></tr>"
@@ -470,7 +472,8 @@ async function loadUnits(){
         return `<tr><td>${esc(u.unit_code)}</td><td>${esc(u.label)}</td><td>${Number(u.weight).toFixed(6)}</td><td>${esc(code)}</td><td>${status}</td></tr>`;
       }).join("")+"</table><p class=\"small\">Para corregir o quitar unidades, reimporta el CSV con la opción de reemplazo.</p>"
     :'<p class="small">Todavía no hay unidades cargadas.</p>';
-  $("unitsList").innerHTML="<h3>Unidades registradas</h3>"+unitsHtml;
+  $("unitsCount").textContent=units.length;
+  $("unitsList").innerHTML=unitsHtml;
   if(csvParsed)renderCsvPreview();
 }
 $("addQuestionBtn").onclick=async()=>{
